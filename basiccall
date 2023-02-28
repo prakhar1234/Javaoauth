@@ -1,0 +1,53 @@
+import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.Base64;
+
+public class OAuth2ClientCredentialsFlow {
+    public static void main(String[] args) throws IOException {
+        String clientId = "your_client_id_here";
+        String clientSecret = "your_client_secret_here";
+        String tokenEndpoint = "https://example.com/token";
+
+        String authString = clientId + ":" + clientSecret;
+        String encodedAuthString = Base64.getEncoder().encodeToString(authString.getBytes());
+
+        URL tokenUrl = new URL(tokenEndpoint);
+        HttpURLConnection connection = (HttpURLConnection) tokenUrl.openConnection();
+        connection.setRequestMethod("POST");
+        connection.setRequestProperty("Authorization", "Basic " + encodedAuthString);
+        connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+        connection.setDoOutput(true);
+
+        String requestBody = "grant_type=client_credentials";
+        connection.getOutputStream().write(requestBody.getBytes());
+
+        int responseCode = connection.getResponseCode();
+        if (responseCode == 200) {
+            // Success! Parse the access token from the response body
+            String responseBody = new String(connection.getInputStream().readAllBytes());
+            String accessToken = parseAccessToken(responseBody);
+            System.out.println("Access token: " + accessToken);
+        } else {
+            // Error! Handle the response code appropriately
+            String errorBody = new String(connection.getErrorStream().readAllBytes());
+            System.out.println("Error response code: " + responseCode);
+            System.out.println("Error response body: " + errorBody);
+        }
+
+        connection.disconnect();
+    }
+
+    private static String parseAccessToken(String responseBody) {
+        // Parse the access token from the response body using a JSON parser or regex
+        // In this example, we'll assume the response body is in JSON format
+        String accessToken = null;
+        try {
+            JSONObject responseJson = new JSONObject(responseBody);
+            accessToken = responseJson.getString("access_token");
+        } catch (JSONException e) {
+            System.out.println("Error parsing access token: " + e.getMessage());
+        }
+        return accessToken;
+    }
+}
