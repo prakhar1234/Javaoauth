@@ -1,53 +1,44 @@
 import java.io.IOException;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.util.Base64;
 
-public class OAuth2ClientCredentialsFlow {
+import org.apache.http.HttpEntity;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClients;
+import org.apache.http.util.EntityUtils;
+
+public class OAuthClient {
+
     public static void main(String[] args) throws IOException {
-        String clientId = "your_client_id_here";
-        String clientSecret = "your_client_secret_here";
-        String tokenEndpoint = "https://example.com/token";
 
-        String authString = clientId + ":" + clientSecret;
-        String encodedAuthString = Base64.getEncoder().encodeToString(authString.getBytes());
+        // Set the OAuth server URL
+        String tokenUrl = "https://oauth.example.com/token";
 
-        URL tokenUrl = new URL(tokenEndpoint);
-        HttpURLConnection connection = (HttpURLConnection) tokenUrl.openConnection();
-        connection.setRequestMethod("POST");
-        connection.setRequestProperty("Authorization", "Basic " + encodedAuthString);
-        connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-        connection.setDoOutput(true);
+        // Set the client ID and client secret
+        String clientId = "your_client_id";
+        String clientSecret = "your_client_secret";
 
-        String requestBody = "grant_type=client_credentials";
-        connection.getOutputStream().write(requestBody.getBytes());
+        // Create a base64 encoded string of the client ID and client secret
+        String credentials = Base64.getEncoder().encodeToString((clientId + ":" + clientSecret).getBytes());
 
-        int responseCode = connection.getResponseCode();
-        if (responseCode == 200) {
-            // Success! Parse the access token from the response body
-            String responseBody = new String(connection.getInputStream().readAllBytes());
-            String accessToken = parseAccessToken(responseBody);
-            System.out.println("Access token: " + accessToken);
-        } else {
-            // Error! Handle the response code appropriately
-            String errorBody = new String(connection.getErrorStream().readAllBytes());
-            System.out.println("Error response code: " + responseCode);
-            System.out.println("Error response body: " + errorBody);
+        // Create the HttpPost request to obtain the access token
+        HttpPost post = new HttpPost(tokenUrl);
+        post.setHeader("Authorization", "Basic " + credentials);
+        post.setHeader("Content-Type", "application/x-www-form-urlencoded");
+        post.setEntity(new StringEntity("grant_type=client_credentials"));
+
+        // Create a CloseableHttpClient to execute the request
+        try (CloseableHttpClient httpClient = HttpClients.createDefault();
+             CloseableHttpResponse response = httpClient.execute(post)) {
+
+            // Get the response body as a String
+            HttpEntity entity = response.getEntity();
+            String responseBody = EntityUtils.toString(entity);
+
+            // Print the response body
+            System.out.println(responseBody);
         }
-
-        connection.disconnect();
-    }
-
-    private static String parseAccessToken(String responseBody) {
-        // Parse the access token from the response body using a JSON parser or regex
-        // In this example, we'll assume the response body is in JSON format
-        String accessToken = null;
-        try {
-            JSONObject responseJson = new JSONObject(responseBody);
-            accessToken = responseJson.getString("access_token");
-        } catch (JSONException e) {
-            System.out.println("Error parsing access token: " + e.getMessage());
-        }
-        return accessToken;
     }
 }
